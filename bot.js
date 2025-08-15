@@ -18,7 +18,7 @@ const withdrawalRateLimits = new Map()
 const RATE_LIMIT_WINDOW = 60 * 1000
 const RATE_LIMIT_MAX = 3
 const WITHDRAWAL_RATE_LIMIT_WINDOW = 300 * 1000
-const BACKUP_INTERVAL = 6 * 60 * 60 * 1000
+const BACKUP_INTERVAL = 3 * 60 * 60 * 1000
 
 function checkRateLimit(userId) {
   const now = Date.now()

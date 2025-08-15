@@ -1,0 +1,16 @@
+{
+  "name": "kevin-discord-bot",
+  "version": "0.1.0",
+  "description": "Kevin dust reward bot for Discord",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "author": "Rook",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^2.7.0"
+  }
+}

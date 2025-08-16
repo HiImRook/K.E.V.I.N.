@@ -133,10 +133,10 @@ const setBalanceCommand = new SlashCommandBuilder()
 
 const restoreCommand = new SlashCommandBuilder()
   .setName('restore')
-  .setDescription('Restore balances from backup channel (Admin only)')
+  .setDescription('Restore balances from any channel (Admin only)')
   .addChannelOption(option =>
-    option.setName('channel')
-      .setDescription('Channel containing balance backup data')
+    option.setName('restore_channel')
+      .setDescription('Channel containing balance data')
       .setRequired(true))
 
 const bonusCommand = new SlashCommandBuilder()
@@ -146,10 +146,18 @@ const bonusCommand = new SlashCommandBuilder()
     option.setName('multiplier')
       .setDescription('Multiplier x')
       .setRequired(true))
+  .addRoleOption(option =>
+    option.setName('role')
+      .setDescription('Role to notify about the bonus event')
+      .setRequired(true))
 
 const endBonusCommand = new SlashCommandBuilder()
   .setName('endbonus')
   .setDescription('End bonus multiplier event (Admin only)')
+  .addRoleOption(option =>
+    option.setName('role')
+      .setDescription('Role to notify that the bonus event has ended')
+      .setRequired(true))
 
 client.once('ready', async () => {
   try {
@@ -163,7 +171,6 @@ client.once('ready', async () => {
     })
 
     setInterval(dumpBalances, BACKUP_INTERVAL)
-    console.log('Balance backup scheduler started')
   } catch (error) {
     console.error('Ready event error:', error)
   }
@@ -323,8 +330,8 @@ client.on('interactionCreate', async (interaction) => {
         return
       }
 
-      const backupChannel = interaction.options.getChannel('channel')
-      if (!backupChannel) {
+      const selectedChannel = interaction.options.getChannel('restore_channel')
+      if (!selectedChannel) {
         await interaction.reply({
           content: '❌ Invalid channel selected.',
           ephemeral: true
@@ -333,7 +340,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       try {
-        const channel = await client.channels.fetch(backupChannel.id)
+        const channel = await client.channels.fetch(selectedChannel.id)
         if (!channel) {
           await interaction.reply({
             content: '❌ Channel not found.',
@@ -343,40 +350,32 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         const messages = await channel.messages.fetch({ limit: 50 })
-        const backupMessage = messages.find(msg => msg.content.includes('📊 Balance Backup'))
+        const balanceMessage = messages.find(msg => msg.content.includes('📊') && msg.content.includes('Balance Backup'))
 
-        if (!backupMessage) {
+        if (!balanceMessage) {
           await interaction.reply({
-            content: '❌ No backup data found in selected channel.',
+            content: '❌ No balance data found in selected channel.',
             ephemeral: true
           })
           return
         }
 
-        const lines = backupMessage.content.split('\n')
         let restoredCount = 0
         let totalAmount = 0
 
-        for (const line of lines) {
-          const userMatch = line.match(/@(\w+): ([\d.]+) ADA/)
-          if (userMatch) {
-            const username = userMatch[1]
-            const amount = parseFloat(userMatch[2])
+        const userMatches = balanceMessage.content.matchAll(/<@(\d+)>: ([\d.]+) ADA/g)
+        for (const match of userMatches) {
+          const userId = match[1]
+          const amount = parseFloat(match[2])
 
-            const guild = interaction.guild
-            const member = guild.members.cache.find(m => m.user.username === username || m.displayName === username)
-
-            if (member) {
-              addToBalance(member.user.id, amount)
-              restoredCount++
-              totalAmount += amount
-              console.log(`Restored ${amount} ADA to user ${username} (${member.user.id})`)
-            }
-          }
+          addToBalance(userId, amount)
+          restoredCount++
+          totalAmount += amount
+          console.log(`Restored ${amount} ADA to user ${userId}`)
         }
 
         await interaction.reply({
-          content: `✅ Restored balances for ${restoredCount} users with total ${totalAmount.toFixed(4)} ADA from <#${backupChannel.id}>`,
+          content: `✅ Restored balances for ${restoredCount} users with total ${totalAmount.toFixed(4)} ADA from <#${selectedChannel.id}>`,
           ephemeral: true
         })
 
@@ -408,12 +407,14 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const multiplier = interaction.options.getNumber('multiplier')
+      const role = interaction.options.getRole('role')
+      
       guildConfig.bonusMultiplier = multiplier
       guildConfigs.set(interaction.guildId, guildConfig)
 
       await interaction.reply({
-        content: `🎉 Bonus multiplier set to ${multiplier}x`,
-        ephemeral: true
+        content: `📢 <@&${role.id}> **BONUS EVENT STARTED!** All engagement rewards are now **${multiplier}x** the normal amount! 🤷‍♂️`,
+        ephemeral: false
       })
     }
 
@@ -435,12 +436,14 @@ client.on('interactionCreate', async (interaction) => {
         return
       }
 
+      const role = interaction.options.getRole('role')
+      
       guildConfig.bonusMultiplier = 1.0
       guildConfigs.set(interaction.guildId, guildConfig)
 
       await interaction.reply({
-        content: `🎉 Bonus event ended`,
-        ephemeral: true
+        content: `<@&${role.id}> **Bonus event has ended.** Engagement rewards are back to normal amounts.`,
+        ephemeral: false
       })
     }
 

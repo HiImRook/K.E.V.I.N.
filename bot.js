@@ -134,6 +134,10 @@ const setBalanceCommand = new SlashCommandBuilder()
 const restoreCommand = new SlashCommandBuilder()
   .setName('restore')
   .setDescription('Restore balances from backup channel (Admin only)')
+  .addChannelOption(option =>
+    option.setName('channel')
+      .setDescription('Channel containing balance backup data')
+      .setRequired(true))
 
 const bonusCommand = new SlashCommandBuilder()
   .setName('bonus')
@@ -319,31 +323,31 @@ client.on('interactionCreate', async (interaction) => {
         return
       }
 
-      const guildConfig = guildConfigs.get(interaction.guildId)
-      if (!guildConfig || !guildConfig.backupChannelId) {
+      const backupChannel = interaction.options.getChannel('channel')
+      if (!backupChannel) {
         await interaction.reply({
-          content: '❌ No backup channel configured. Run /setup first.',
+          content: '❌ Invalid channel selected.',
           ephemeral: true
         })
         return
       }
 
       try {
-        const backupChannel = await client.channels.fetch(guildConfig.backupChannelId)
-        if (!backupChannel) {
+        const channel = await client.channels.fetch(backupChannel.id)
+        if (!channel) {
           await interaction.reply({
-            content: '❌ Backup channel not found.',
+            content: '❌ Channel not found.',
             ephemeral: true
           })
           return
         }
 
-        const messages = await backupChannel.messages.fetch({ limit: 50 })
+        const messages = await channel.messages.fetch({ limit: 50 })
         const backupMessage = messages.find(msg => msg.content.includes('📊 Balance Backup'))
 
         if (!backupMessage) {
           await interaction.reply({
-            content: '❌ No backup data found in backup channel.',
+            content: '❌ No backup data found in selected channel.',
             ephemeral: true
           })
           return
@@ -372,7 +376,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         await interaction.reply({
-          content: `✅ Restored balances for ${restoredCount} users with total ${totalAmount.toFixed(4)} ADA`,
+          content: `✅ Restored balances for ${restoredCount} users with total ${totalAmount.toFixed(4)} ADA from <#${backupChannel.id}>`,
           ephemeral: true
         })
 

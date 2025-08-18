@@ -413,7 +413,7 @@ client.on('interactionCreate', async (interaction) => {
       guildConfigs.set(interaction.guildId, guildConfig)
 
       await interaction.reply({
-        content: `📢 <@&${role.id}> **BONUS EVENT STARTED!** All engagement rewards are now **${multiplier}x** the normal amount! 🤷‍♂️`,
+        content: `🎉 <@&${role.id}> **BONUS EVENT STARTED!** All engagement rewards are now **${multiplier}x** the normal amount! 🥳`,
         ephemeral: false
       })
     }
@@ -442,7 +442,7 @@ client.on('interactionCreate', async (interaction) => {
       guildConfigs.set(interaction.guildId, guildConfig)
 
       await interaction.reply({
-        content: `<@&${role.id}> **Bonus event has ended.** Engagement rewards are back to normal amounts.`,
+        content: `📢 <@&${role.id}> **Bonus event has ended.** Engagement rewards are back to normal amounts. 🤷‍♂️`,
         ephemeral: false
       })
     }
